@@ -4,6 +4,7 @@ from decimal import Decimal
 from xml.etree.ElementTree import fromstring
 from xml.etree import ElementTree as ET
 from base64 import b64encode
+import logging
 
 API_VERSION = 'v4'
 
@@ -75,6 +76,7 @@ class Client:
             if put:
                 method = "PUT"
             result = urlfetch.fetch(self.get_url(), payload = payload, method = method,headers = headers, deadline = 10)
+            logging.info(result.status_code)
             self.response = result.content
                 
     def get_plans(self):
@@ -159,7 +161,7 @@ class Client:
             
             result.append(data)
         return result[0]
-    
+
     def delete_subscriber(self, id):
         if 'test' in self.base_path:
             headers = {'Authorization': 'Basic %s' % self.auth}
@@ -310,3 +312,8 @@ class Client:
         except urllib2.HTTPError, e:
             if e.code == 404:
                 return self.create_subscriber(subscriber_id, screen_name)
+
+    def add_fee_to_subscriber(self, subscriber_id, name = '', description = '', group = '', amount = ''):
+        data = """<fee><name>%s</name><description>%s</description><group>%s</group><amount>%s</amount></fee>""" % (name,description, group, amount)
+        self.set_url('subscribers/%s/fees.xml' % subscriber_id)
+        self.query(data)
