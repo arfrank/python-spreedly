@@ -7,6 +7,12 @@ from base64 import b64encode
 
 API_VERSION = 'v4'
 
+try:
+    from google.appengine.api import urlfetch
+    APPENGINE = True
+except:
+    APPENGINE = False
+
 def utc_to_local(dt):
     ''' Converts utc datetime to local'''
     secs = calendar.timegm(dt.timetuple())
@@ -37,25 +43,43 @@ class Client:
         self.url = '%s/%s' % (self.base_url, url)
     
     def query(self, data=None, put=False):
-        opener = urllib2.build_opener(urllib2.HTTPHandler)
-        
-        req = urllib2.Request(url=self.get_url())
-        req.add_header('User-agent', 'python-spreedly 1.0')
-        req.add_header('Authorization', 'Basic %s' % self.auth)
+        if not APPENGINE:
+            opener = urllib2.build_opener(urllib2.HTTPHandler)
+
+            req = urllib2.Request(url=self.get_url())
+            req.add_header('User-agent', 'python-spreedly 1.0')
+            req.add_header('Authorization', 'Basic %s' % self.auth)
 
 
-        # Convert to POST if we got some data
-        if data:
-            req.add_header('Content-Type', 'application/xml')
-            req.add_data(data)
+            # Convert to POST if we got some data
+            if data:
+                req.add_header('Content-Type', 'application/xml')
+                req.add_data(data)
             
-        if put:
-            req.get_method = lambda: 'PUT'
+            if put:
+                req.get_method = lambda: 'PUT'
         
-        f = opener.open(req)
-        self.response = f.read()
-
-    
+            f = opener.open(req)
+            self.response = f.read()
+        else:
+            payload = {}
+            headers =   {
+                        'User-agent' : 'python-spreedly 1.0',
+                        'Authorization':'Basic %s' % self.auth
+                        }
+            method = 'GET'
+            if data:
+                method = "POST"
+                payload = data
+            if put:
+                method = "PUT"
+            rpc = urlfetch.create_rpc(deadline = 10)
+            urlfetch.make_fetch_call(rpc, self.get_url(), payload = payload, method = method,headers = headers)
+            try:
+                self.response = rpc.get_result().content
+            except urlfetch.DownloadError, e:
+                self.response = ''
+                
     def get_plans(self):
         self.set_url('subscription_plans.xml')
         self.query()
