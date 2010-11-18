@@ -70,15 +70,12 @@ class Client:
             method = 'GET'
             if data:
                 method = "POST"
+                headers['Content-Type'] = 'application/xml'
                 payload = data
             if put:
                 method = "PUT"
-            rpc = urlfetch.create_rpc(deadline = 10)
-            urlfetch.make_fetch_call(rpc, self.get_url(), payload = payload, method = method,headers = headers)
-            try:
-                self.response = rpc.get_result().content
-            except urlfetch.DownloadError, e:
-                self.response = ''
+            result = urlfetch.fetch(self.get_url(), payload = payload, method = method,headers = headers, deadline = 10)
+            self.response = result.content
                 
     def get_plans(self):
         self.set_url('subscription_plans.xml')
